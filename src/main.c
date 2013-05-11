@@ -6,17 +6,37 @@
 
 #include <sys/stat.h>
 
+#include <fcntl.h>
+
 #include <errno.h>
 
 #include "includes/glo.h"
+#include "includes/builtin.h"
+#include "includes/do_external.h"
 
 #define YES 1
 #define NO 0
 
+#define REDIRECT_OUTPUT 1
+
+int o_stdout, o_stdin, fd;
+
+void reset() {
+    // reset the I/O redirect etc.
+    close(1);
+    dup(o_stdout);
+    
+    close(0);
+    dup(o_stdin);
+}
+
 void init() {
 	getcwd(PWD, sizeof(PWD)/sizeof(char));
-    
 	strcpy(PROMPT, "=>: ");
+    
+    o_stdout = dup(1);
+    o_stdin = dup(0);
+    reset();
 }
 
 int is_cmd(const char *a_cmd, const char *b_cmd) {
@@ -32,45 +52,73 @@ int get_cmd(char ***argv, int *argc) {
     char ch, last_ch;
     int i = 0, j = 0;
     
-    int is_inside_quotation = 0;
-    memset(buf, 0, sizeof(buf));
-    
-    
-	printf("%s", PROMPT);
+    int state = 0;
 
-    if (*argv)
-        free(*argv);
-    
-	*argv = (char **)malloc(sizeof(char **) * 8);
+    free(*argv);
+    *argv = NULL;
     
 
-    
-    while ((ch = getchar()) != '\n' || last_ch == '\\') {
-        if (ch != ' ' || is_inside_quotation) {
-            last_ch = ch;
-            buf[j++] = ch;
+
+    printf("%s", PROMPT);
+
+    while (ch = getchar()) {
+        if (ch == ' ' || ch == '\n' || ch == '<' || ch == '>') {
+
+            buf[j] = '\0';
+            j = 0;
             
-            if (ch == '"') {
-                is_inside_quotation = 1 - is_inside_quotation;
+            if (strlen(buf) == 0) {
+                if (ch == ' ')
+                    continue;
+            }
+            else {
+                if (state != 0) {
+                    if (state == 1) {
+                        close(0);
+                        fd = open(buf, O_RDONLY);
+                    }
+                    else if (state == 2) {
+                        close(1);
+                        fd = open(buf, O_WRONLY | O_CREAT, 0644);
+                    }
+                    
+                    state = 0;
+                }
+                else {
+                    
+                    if (*argv == NULL)
+                        *argv = (char **)malloc(sizeof(char **));
+                    else
+                        *argv = (char **)realloc(*argv, sizeof(char **) * (i + 1));
+                    
+                    (*argv)[i] = (char *)malloc(strlen(buf) + 1);
+                    
+                    strcpy((*argv)[i], buf);
+                    
+                    i++;
+                    
+                }
+            }
+            
+            if (ch == '<') {
+                state = 1;
+            }
+            else if (ch == '>') {
+                state = 2;
+            }
+            else if (ch == '\n') {
+                *argv = (char **)realloc(*argv, sizeof(char **) * (i + 1));
+                (*argv)[i] = NULL;
+                break;
             }
         }
         else {
-            buf[j] = '\0';
-            
-            (*argv)[i] = (char *)malloc(strlen(buf) + 1);
-            strcpy((*argv)[i], buf);
-            memset(buf, 0, sizeof(buf));
-            
-            i++;
-            j = 0;
+            buf[j++] = ch;
         }
     }
     
-    buf[j] = '\0';
-    
-    (*argv)[i] = (char *)malloc(strlen(buf) + 1);
-    strcpy((*argv)[i], buf);
-    
+    *argc = i;
+
 	return 0;
 }
 
@@ -78,9 +126,10 @@ int get_cmd(char ***argv, int *argc) {
 int main() {
 	char **cmd_s = NULL;
 	int argc;
+    int i;
     
 	init();
-    
+
 	get_cmd(&cmd_s, &argc);
     
 	while (is_cmd(cmd_s[0], "exit") == 0) {
@@ -99,6 +148,8 @@ int main() {
         else {
             printf("%s: not found\n", cmd_s[0]);
         }
+
+        reset();
 
 		get_cmd(&cmd_s, &argc);
 	}

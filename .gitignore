@@ -1,2 +1,7 @@
 *.o
 /bin/*
+
+/test/*
+test
+test.*
+src/osh

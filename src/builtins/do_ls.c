@@ -5,7 +5,6 @@
 void do_ls(char **argv) {
 	const char *dir_path = ".";
 	struct dirent *dp;
-	char *file_path;
 	struct stat buf;
 
 	DIR *dirp = opendir(dir_path);

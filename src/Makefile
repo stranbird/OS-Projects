@@ -1,7 +1,7 @@
 osh: main.o do_external.o do_cd.o do_ls.o do_pwd.o
 	cc -o osh main.o do_external.o do_cd.o do_ls.o do_pwd.o
 
-main.o: main.c includes/glo.h
+main.o: main.c includes/glo.h includes/builtin.h includes/do_external.h
 	cc -c main.c
 
 do_external.o: do_external.c
