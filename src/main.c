@@ -10,33 +10,21 @@
 
 #include "glo.h"
 
-void do_ls() {
-	const char *dir_path = ".";
-	struct dirent *dp;
-	char *file_path;
-	struct stat buf;
+#define YES 1
+#define NO 0
 
-
-	DIR *dirp = opendir(dir_path);
-
-	printf("%8s\t%8s\t%20s\t%8s\t%12s\n", "inode", "nlink", "name", "size", "modified");
-
-	while ((dp = readdir(dirp)) != NULL) {
-	  lstat(dp->d_name, &buf);
-	  // printf("%d\n", buf.st_mode);
-	  printf("%8ld\t%8ld\t%20s\t%8ld\t%12ld\n", (long int)buf.st_ino, (long int)buf.st_nlink, dp->d_name, (long int)buf.st_size, buf.st_mtimespec.tv_sec);
-	}
-	closedir(dirp);
+void init() {
+	getcwd(PWD, sizeof(PWD)/sizeof(char));
+    
+	strcpy(PROMPT, "=>: ");
 }
 
 int is_cmd(const char *a_cmd, const char *b_cmd) {
 	return !strcmp(a_cmd, b_cmd);
 }
 
-void init() {
-	getcwd(PWD, sizeof(PWD)/sizeof(char));
-    
-	strcpy(PROMPT, "=>: ");
+int is_executable(const char *a_cmd) {
+	return YES;
 }
 
 int get_cmd(char ***argv, int *argc) {
@@ -82,9 +70,6 @@ int get_cmd(char ***argv, int *argc) {
     
     (*argv)[i] = (char *)malloc(strlen(buf) + 1);
     strcpy((*argv)[i], buf);
-   
-    
-    
     
 	return 0;
 }
@@ -100,19 +85,17 @@ int main() {
     
 	while (is_cmd(cmd_s[0], "exit") == 0) {
     
-        if (is_cmd(cmd_s[0], "pwd")) {
-            printf("%s\n", PWD);
-        }
-        else if (is_cmd(cmd_s[0], "cd")) {
-            puts(cmd_s[1]);
-            if (chdir(cmd_s[1]) == -1) {
-                printf("chdir: can't cd to %s\n", cmd_s[1]);
-            }
-            else
-                getcwd(PWD, sizeof(PWD)/sizeof(char));
-        }
+    	// internal commands
+        if (is_cmd(cmd_s[0], "pwd"))
+        	do_pwd(cmd_s);
+        else if (is_cmd(cmd_s[0], "cd")) 
+        	do_cd(cmd_s);
         else if (is_cmd(cmd_s[0], "ls"))
-        	do_ls();
+        	do_ls(cmd_s);
+        // external commands
+        else if (is_executable(cmd_s[0])) {
+        	do_external(cmd_s);
+        }
         else {
             printf("%s: not found\n", cmd_s[0]);
         }
