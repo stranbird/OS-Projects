@@ -128,6 +128,10 @@ int get_cmd(char ***argv, int *_to_pipe) {
 	return 0;
 }
 
+int isMainProcess(pid_t mpid) {
+    return mpid == getpid();
+}
+
 
 int main() {
 	char **cmd_s = NULL;
@@ -136,6 +140,9 @@ int main() {
     int fd[2];
     pid_t pid;
     int to_pipe = 0, from_pipe = -1;
+    char buf[255];
+    
+//    const pid_t main_process = getpid();
 
         
 	init();
@@ -154,13 +161,12 @@ int main() {
         if ((pid = fork()) != 0) {
 
             if (to_pipe) {
-                from_pipe = dup(fd[PIPE_R]);
-                close(fd[PIPE_R]);
+                from_pipe = fd[PIPE_R];
             }
             else
                 from_pipe = -1;
             
-            from_pipe = 10;
+//            from_pipe = 10;
             
             printf("parent = %d\n", getpid());
             
@@ -171,19 +177,23 @@ int main() {
         else {
             printf("%d\n", from_pipe);
             printf("%d %s\n", getpid(), cmd_s[0]);
-//            if (from_pipe != -1) {
-//                close(PIPE_R);
+            if (from_pipe != -1) {
+                read(from_pipe, buf, 255);
+                puts(buf);
+                
+                close(PIPE_R);
 //                assert(from_pipe == -1);
-//                assert(dup(from_pipe) == PIPE_R);
-//                close(from_pipe);
-//            }
-//
-//            if (to_pipe) {
-//                close(fd[PIPE_R]);
-//                close(PIPE_W);
-//                dup(fd[PIPE_W]);
-//                close(fd[PIPE_W]);
-//            }
+                assert(dup(from_pipe) == PIPE_R);
+                close(from_pipe);
+            }
+
+            printf("to_pipe %d\n", to_pipe);
+            if (to_pipe) {
+                close(fd[PIPE_R]);
+                close(PIPE_W);
+                dup(fd[PIPE_W]);
+                close(fd[PIPE_W]);
+            }
 
         	// internal commands
             if (is_cmd(cmd_s[0], "pwd"))
@@ -199,6 +209,7 @@ int main() {
             else {
                 printf("%s: not found\n", cmd_s[0]);
             }
+            break;
         }
         
         printf("%d %d\n", getpid(), from_pipe);
