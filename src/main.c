@@ -42,74 +42,51 @@ int get_cmd(char ***argv, int *argc) {
     char buf[255];
     char ch, last_ch;
     int i = 0, j = 0;
+    char **ptr;
 
-    int o_stdout, fd;
+    free(*argv);
+    *argv = NULL;
 
-    int state = 0;;
-    
-    int is_inside_quotation = 0;
-    memset(buf, 0, sizeof(buf));
-    
-    
-	printf("%s", PROMPT);
 
-    if (*argv)
-        free(*argv);
-    
-	*argv = (char **)malloc(sizeof(char **) * 8);
-        
-    while ((ch = getchar()) != '\n' || last_ch == '\\') {
-        if ((ch != '<' && ch != '>' && ch != ' ') || is_inside_quotation) {
-            last_ch = ch;
-            buf[j++] = ch;
-            
-            if (ch == '"') {
-                is_inside_quotation = 1 - is_inside_quotation;
-            }
+    printf("%s", PROMPT);
 
-            puts("1");
-        }
-        else if (ch == '<') {
-            puts("2");
-        }
-        else if (ch == '>') {
-            state = REDIRECT_OUTPUT;
-            puts("3");
-        }
-        // Got a valid token, could be a file_path of I/O redirection.
-        else {
+    while (ch = getchar()) {
+        if (ch == ' ' || ch == '\n' || ch == '<' || ch == '>') {
+
             buf[j] = '\0';
 
-            printf("current state: %d\n", state);
+            if (*argv == NULL)
+                *argv = (char **)malloc(sizeof(char **));
+            else
+                *argv = (char **)realloc(*argv, sizeof(char **) * (i + 1));
 
-            if (state == REDIRECT_OUTPUT) {
-                o_stdout = dup(1);
-                close(1);
-                fd = open(buf, O_WRONLY | O_CREAT);
-            }
-            else {
+            (*argv)[i] = (char *)malloc(strlen(buf) + 1);
 
-                (*argv)[i] = (char *)malloc(strlen(buf) + 1);
-                strcpy((*argv)[i], buf);
-                memset(buf, 0, sizeof(buf));
-                
-                i++;
-            }
+            strcpy((*argv)[i], buf);
 
+            i++;
             j = 0;
-            puts("4");
+
+            if (ch == '\n') {
+                *argv = (char **)realloc(*argv, sizeof(char **) * (i + 1));
+                (*argv)[i] = NULL;
+                break;
+            }
+            else if (ch == '<') {
+
+            }
+            else if (ch == '>') {
+
+            }
+        }
+        else {
+            buf[j++] = ch;
         }
     }
     
-    buf[j] = '\0';
-    
-    (*argv)[i] = (char *)malloc(strlen(buf) + 1);
-    strcpy((*argv)[i], buf);
+    printf("%ld\n", sizeof(buf));
+    *argc = i;
 
-    for (int j = 0; j <= i; j++) {
-        printf("%s\n", (*argv)[j]);
-    }
-    
 	return 0;
 }
 
@@ -117,6 +94,7 @@ int get_cmd(char ***argv, int *argc) {
 int main() {
 	char **cmd_s = NULL;
 	int argc;
+    int i;
     
 	init();
 
