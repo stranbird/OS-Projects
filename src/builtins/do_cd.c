@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <unistd.h>
 
-#include "../glo.h"
+#include "../includes/glo.h"
 
 void do_cd(char **argv) {
 	// puts(cmd_s[1]);

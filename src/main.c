@@ -8,7 +8,7 @@
 
 #include <errno.h>
 
-#include "glo.h"
+#include "includes/glo.h"
 
 #define YES 1
 #define NO 0
