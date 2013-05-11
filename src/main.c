@@ -19,12 +19,15 @@
 
 #define REDIRECT_OUTPUT 1
 
-int o_stdout, fd;
+int o_stdout, o_stdin, fd;
 
 void reset() {
     // reset the I/O redirect etc.
     close(1);
     dup(o_stdout);
+    
+    close(0);
+    dup(o_stdin);
 }
 
 void init() {
@@ -32,6 +35,7 @@ void init() {
 	strcpy(PROMPT, "=>: ");
     
     o_stdout = dup(1);
+    o_stdin = dup(0);
     reset();
 }
 
@@ -70,6 +74,8 @@ int get_cmd(char ***argv, int *argc) {
             else {
                 if (state != 0) {
                     if (state == 1) {
+                        close(0);
+                        fd = open(buf, O_RDONLY);
                     }
                     else if (state == 2) {
                         close(1);
