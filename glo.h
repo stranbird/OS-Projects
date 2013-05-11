@@ -1,1 +1,6 @@
-char *PWD;
+#define MAX_PATH_LEN 255
+#define MAX_CMD_LEN 255
+#define MAX_PROMPT_LEN 255
+
+char PWD[MAX_PATH_LEN];
+char PROMPT[MAX_PROMPT_LEN];
