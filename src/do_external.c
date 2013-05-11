@@ -14,17 +14,16 @@ int do_external(char **argv) {
 //		printf("%d %s\n", i, argv[i]);
 //	puts("---------");
 
-	if ((child_pid = fork()) != 0) {
-		// parent process
-		waitpid(child_pid, &stat_loc, 0);
-	}
-	else {
-		// child process
-		error = execve(argv[0], argv, 0);
-        if (error == -1) {
-            
-        }
-	}
+	// if ((child_pid = fork()) != 0) {
+	// 	// parent process
+	// 	waitpid(child_pid, &stat_loc, 0);
+	// }
+	// else {
+	// 	// child process
+    if (execve(argv[0], argv, 0) == -1) {
+        
+    }
+	// }
 
 	return 0;
 }
