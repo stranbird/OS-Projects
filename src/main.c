@@ -19,14 +19,19 @@
 
 #define REDIRECT_OUTPUT 1
 
+int o_stdout, fd;
+
 void reset() {
     // reset the I/O redirect etc.
+    close(1);
+    dup(o_stdout);
 }
 
 void init() {
 	getcwd(PWD, sizeof(PWD)/sizeof(char));
 	strcpy(PROMPT, "=>: ");
-
+    
+    o_stdout = dup(1);
     reset();
 }
 
@@ -42,10 +47,12 @@ int get_cmd(char ***argv, int *argc) {
     char buf[255];
     char ch, last_ch;
     int i = 0, j = 0;
-    char **ptr;
+    
+    int state = 0;
 
     free(*argv);
     *argv = NULL;
+    
 
 
     printf("%s", PROMPT);
@@ -54,29 +61,49 @@ int get_cmd(char ***argv, int *argc) {
         if (ch == ' ' || ch == '\n' || ch == '<' || ch == '>') {
 
             buf[j] = '\0';
-
-            if (*argv == NULL)
-                *argv = (char **)malloc(sizeof(char **));
-            else
-                *argv = (char **)realloc(*argv, sizeof(char **) * (i + 1));
-
-            (*argv)[i] = (char *)malloc(strlen(buf) + 1);
-
-            strcpy((*argv)[i], buf);
-
-            i++;
             j = 0;
-
-            if (ch == '\n') {
+            
+            if (strlen(buf) == 0) {
+                if (ch == ' ')
+                    continue;
+            }
+            else {
+                if (state != 0) {
+                    if (state == 1) {
+                    }
+                    else if (state == 2) {
+                        close(1);
+                        fd = open(buf, O_WRONLY | O_CREAT, 0644);
+                    }
+                    
+                    state = 0;
+                }
+                else {
+                    
+                    if (*argv == NULL)
+                        *argv = (char **)malloc(sizeof(char **));
+                    else
+                        *argv = (char **)realloc(*argv, sizeof(char **) * (i + 1));
+                    
+                    (*argv)[i] = (char *)malloc(strlen(buf) + 1);
+                    
+                    strcpy((*argv)[i], buf);
+                    
+                    i++;
+                    
+                }
+            }
+            
+            if (ch == '<') {
+                state = 1;
+            }
+            else if (ch == '>') {
+                state = 2;
+            }
+            else if (ch == '\n') {
                 *argv = (char **)realloc(*argv, sizeof(char **) * (i + 1));
                 (*argv)[i] = NULL;
                 break;
-            }
-            else if (ch == '<') {
-
-            }
-            else if (ch == '>') {
-
             }
         }
         else {
@@ -84,7 +111,6 @@ int get_cmd(char ***argv, int *argc) {
         }
     }
     
-    printf("%ld\n", sizeof(buf));
     *argc = i;
 
 	return 0;
