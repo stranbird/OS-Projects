@@ -1,5 +1,5 @@
 osh: main.o do_external.o do_cd.o do_ls.o do_pwd.o
-	cc -o ../bin/osh main.o do_external.o do_cd.o do_ls.o do_pwd.o
+	cc -o osh main.o do_external.o do_cd.o do_ls.o do_pwd.o
 
 main.o: main.c includes/glo.h
 	cc -c main.c
