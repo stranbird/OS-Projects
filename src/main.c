@@ -4,11 +4,8 @@
 #include <stdlib.h>
 #include <dirent.h>
 #include <assert.h>
-
 #include <sys/stat.h>
-
 #include <fcntl.h>
-
 #include <errno.h>
 
 #include "includes/glo.h"
@@ -51,20 +48,22 @@ int is_executable(const char *a_cmd) {
 	return YES;
 }
 
-int get_cmd(char ***argv, int *_to_pipe) {
+int get_cmd(char ***argv, int *is_pipe) {
     char buf[255];
     char ch;
-    int i = 0, j = 0;
-    int to_pipe = *_to_pipe;
+    int i = 0, j;
+    
+    memset(buf, 0, sizeof(buf));
     
     int state = 0;
 
     free(*argv);
     *argv = NULL;
     
-    if (!to_pipe)
+    if (!(*is_pipe))
         printf("%s", PROMPT);
 
+    j = 0;
     while ((ch = getchar())) {
         if (ch == ' ' || ch == '\n' || ch == '<' || ch == '>' || ch == '|') {
 
@@ -112,18 +111,22 @@ int get_cmd(char ***argv, int *_to_pipe) {
                 state = 2;
             }
             else if (ch == '\n' || ch == '|') {
-                to_pipe = (ch == '|');
+                *is_pipe = (ch == '|');
+                if (i == 0) {
+                    return get_cmd(argv, is_pipe);
+                }
                 *argv = (char **)realloc(*argv, sizeof(char **) * (i + 1));
                 (*argv)[i] = NULL;
                 break;
             }
         }
+//        else if (ch == \xff) {
+        
+//        }
         else {
             buf[j++] = ch;
         }
     }
-    
-    *_to_pipe = to_pipe;
 
 	return 0;
 }
@@ -135,73 +138,69 @@ int isMainProcess(pid_t mpid) {
 
 int main() {
 	char **cmd_s = NULL;
-	int argc;
     int stat_loc;
-    int fd[2];
+    int fd[2], ofd[2];
     pid_t pid;
-    int to_pipe = 0, from_pipe = -1;
-    char buf[255];
+    int is_pipe = 0;
     
 //    const pid_t main_process = getpid();
 
         
 	init();
+    
+    ofd[PIPE_R] = -1;
 
-    printf("main: %d\n", getpid());
 
-	get_cmd(&cmd_s, &to_pipe);
+	get_cmd(&cmd_s, &is_pipe);
 
         
 	while (is_cmd(cmd_s[0], "exit") == 0) {
         
-        if (to_pipe) {
+        if (is_pipe) {
             pipe(fd);            
         }
 
         if ((pid = fork()) != 0) {
+            
+//            if (ofd[PIPE_R] == -1)
+                waitpid(-1, &stat_loc, 0);
 
-            if (to_pipe) {
-                from_pipe = fd[PIPE_R];
+            if (is_pipe) {
+                ofd[0] = fd[0];
+                ofd[1] = fd[1];
             }
-            else
-                from_pipe = -1;
+            else {
+                ofd[PIPE_R] = -1;
+            }
             
-//            from_pipe = 10;
-            
-            printf("parent = %d\n", getpid());
-            
-            
-            waitpid(pid, &stat_loc, 0);
-
+//            waitpid(-1, &stat_loc, 0);
         }
         else {
-            printf("%d\n", from_pipe);
-            printf("%d %s\n", getpid(), cmd_s[0]);
-            if (from_pipe != -1) {
-                read(from_pipe, buf, 255);
-                puts(buf);
-                
-                close(PIPE_R);
-//                assert(from_pipe == -1);
-                assert(dup(from_pipe) == PIPE_R);
-                close(from_pipe);
-            }
-
-            printf("to_pipe %d\n", to_pipe);
-            if (to_pipe) {
-                close(fd[PIPE_R]);
-                close(PIPE_W);
-                dup(fd[PIPE_W]);
-                close(fd[PIPE_W]);
-            }
+//            if (ofd[PIPE_R] != -1) {
+//                close(ofd[PIPE_W]);
+//                close(PIPE_R);
+//                assert(dup(ofd[PIPE_R]) == PIPE_R);
+//                close(ofd[PIPE_R]);
+//            }
+//
+//            if (is_pipe) {
+//                close(fd[PIPE_R]);
+//                close(PIPE_W);
+//                dup(fd[PIPE_W]);
+//                close(fd[PIPE_W]);
+//            }
 
         	// internal commands
             if (is_cmd(cmd_s[0], "pwd"))
             	do_pwd(cmd_s);
-            else if (is_cmd(cmd_s[0], "cd")) 
+            else if (is_cmd(cmd_s[0], "cd")) {
+                puts("cd");
             	do_cd(cmd_s);
-            else if (is_cmd(cmd_s[0], "ls"))
+            }
+            else if (is_cmd(cmd_s[0], "ls")) {
+                puts("here");
             	do_ls(cmd_s);
+            }
             // external commands
             else if (is_executable(cmd_s[0])) {
             	do_external(cmd_s);
@@ -209,15 +208,14 @@ int main() {
             else {
                 printf("%s: not found\n", cmd_s[0]);
             }
-            break;
+            
+            printf("should be here2: %s\n", cmd_s[0]);
+            
+            return 0;
         }
-        
-        printf("%d %d\n", getpid(), from_pipe);
-
-        if (!to_pipe)
-            reset();
-
-		get_cmd(&cmd_s, &argc);
+                
+        reset();
+		get_cmd(&cmd_s, &is_pipe);
 	}
     
 	return 0;
