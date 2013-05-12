@@ -4,9 +4,14 @@
 #include <errno.h>
 #include <stdio.h>
 
+#include "includes/glo.h"
+
+extern int setup_pipe();
+
 int do_external(char **argv) {
 	int stat_loc = 0;
 	int i = 0;
+    FILE *fout = fopen("logger.txt", "a");
 //
 	puts("---------");
 	for (i = 0; argv[i] != NULL; i++)
@@ -19,6 +24,11 @@ int do_external(char **argv) {
 	}
 	else {
 		// child process
+        fprintf(fout, "[1]%d\n", ofd[0]);
+		setup_pipe();
+        fprintf(fout, "[2]%d\n", ofd[0]);
+        fclose(fout);
+
 	    if (execve(argv[0], argv, 0) == -1) {
 	        puts("execution error");
 	    }

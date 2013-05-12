@@ -4,3 +4,7 @@
 
 char PWD[MAX_PATH_LEN];
 char PROMPT[MAX_PROMPT_LEN];
+
+int o_stdout, o_stdin;
+int fd[2], ofd[2];
+int is_pipe;
