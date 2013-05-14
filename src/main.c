@@ -2,157 +2,142 @@
 #include <string.h>
 #include <unistd.h>
 #include <stdlib.h>
-#include <dirent.h>
 
-#include <sys/stat.h>
+#include "parser.h"
 
-#include <fcntl.h>
-
-#include <errno.h>
-
+#include "includes/pipe.h"
 #include "includes/glo.h"
 #include "includes/builtin.h"
 #include "includes/do_external.h"
 
-#define YES 1
-#define NO 0
+int o_stdin, o_stdout;
+int fd[2], ofd[2];
 
-#define REDIRECT_OUTPUT 1
 
-int o_stdout, o_stdin, fd;
+void type_prompt(int flag) {
+    if (flag == NORMAL) {
+        printf("%% ");
+    }
+}
 
-void reset() {
-    // reset the I/O redirect etc.
-    close(1);
-    dup(o_stdout);
+bool is_internal(const char *cmd) {
+    char *internal_cmd[] = {
+        "cd",
+        "pwd",
+        "ls"
+    };
     
-    close(0);
+    for (int i = 0; i != sizeof(internal_cmd) / sizeof(char *); i++)
+        if (strcmp(cmd, internal_cmd[i]) == 0)
+            return YES;
+ 
+    return NO;
+}
+
+bool is_external(const char *cmd) {
+    return access(cmd, X_OK) == 0;
+}
+
+bool is_cmd(const char *a_cmd, const char *b_cmd) {
+    return strcmp(a_cmd, b_cmd) == 0;
+}
+
+void reset_pipe() {
+    fd[PIPE_R] = PIPE_R;
+    fd[PIPE_W] = PIPE_W;
+    
+    close(PIPE_R);
     dup(o_stdin);
-}
-
-void init() {
-	getcwd(PWD, sizeof(PWD)/sizeof(char));
-	strcpy(PROMPT, "=>: ");
     
-    o_stdout = dup(1);
-    o_stdin = dup(0);
-    reset();
+    close(PIPE_W);
+    dup(o_stdout);
 }
 
-int is_cmd(const char *a_cmd, const char *b_cmd) {
-	return !strcmp(a_cmd, b_cmd);
-}
-
-int is_executable(const char *a_cmd) {
-	return YES;
-}
-
-int get_cmd(char ***argv, int *argc) {
-    char buf[255];
-    char ch, last_ch;
-    int i = 0, j = 0;
+int main()
+{
+    char **argv;
+    bool flag = NORMAL;
+    int stat;
+    pid_t pid;
     
-    int state = 0;
-
-    free(*argv);
-    *argv = NULL;
+    o_stdin = dup(PIPE_R);
+    o_stdout = dup(PIPE_W);
     
-
-
-    printf("%s", PROMPT);
-
-    while (ch = getchar()) {
-        if (ch == ' ' || ch == '\n' || ch == '<' || ch == '>') {
-
-            buf[j] = '\0';
-            j = 0;
-            
-            if (strlen(buf) == 0) {
-                if (ch == ' ')
-                    continue;
+    reset_pipe();
+    
+    ofd[PIPE_R] = -1;
+    
+    while (YES) {
+        type_prompt(flag);
+        
+        reset_pipe();
+        
+        getcmd(&argv, &flag, &fd[PIPE_R], &fd[PIPE_W]);
+        
+        
+        if (flag == TO_PIPE) {
+            pipe(fd);
+        }
+        else if (flag == NORMAL) {
+            if (fd[PIPE_R] != PIPE_R) {
+                close(PIPE_R);
+                dup(fd[PIPE_R]);
+                close(fd[PIPE_R]);
+                fd[PIPE_R] = PIPE_R;
+            }
+            if (fd[PIPE_W] != PIPE_W) {
+                close(PIPE_W);
+                dup(fd[PIPE_W]);
+                close(fd[PIPE_W]);
+                fd[PIPE_W] = PIPE_W;
+            }
+        }
+        
+        if (argv[0] == NULL)
+            continue;
+        if (strcmp(argv[0], "exit") == 0)
+            break;
+        else if (is_internal(argv[0])) {
+            if (is_cmd(argv[0], "pwd"))
+                do_pwd(argv);
+            else if (is_cmd(argv[0], "cd"))
+                do_cd(argv);
+            else if (is_cmd(argv[0], "ls"))
+                do_ls(argv);
+        }
+        else if (is_external(argv[0])) {
+            if ((pid = fork()) != 0) {
+                if (flag == TO_PIPE) {
+                    close(fd[PIPE_W]);
+                    
+                    ofd[PIPE_R] = fd[PIPE_R];
+                }
+                else
+                    ofd[PIPE_R] = PIPE_R;
+                
+                waitpid(pid, &stat, 0);
             }
             else {
-                if (state != 0) {
-                    if (state == 1) {
-                        close(0);
-                        fd = open(buf, O_RDONLY);
-                    }
-                    else if (state == 2) {
-                        close(1);
-                        fd = open(buf, O_WRONLY | O_CREAT, 0644);
-                    }
-                    
-                    state = 0;
+                
+                if (fd[PIPE_W] != PIPE_W) {
+                    close(fd[PIPE_R]);
+                    close(PIPE_W);
+                    dup(fd[PIPE_W]);
+                    close(fd[PIPE_W]);
                 }
-                else {
-                    
-                    if (*argv == NULL)
-                        *argv = (char **)malloc(sizeof(char **));
-                    else
-                        *argv = (char **)realloc(*argv, sizeof(char **) * (i + 1));
-                    
-                    (*argv)[i] = (char *)malloc(strlen(buf) + 1);
-                    
-                    strcpy((*argv)[i], buf);
-                    
-                    i++;
-                    
+                
+                if (ofd[PIPE_R] != PIPE_R) {
+                    close(PIPE_R);
+                    dup(ofd[PIPE_R]);
+                    close(ofd[PIPE_R]);
                 }
-            }
-            
-            if (ch == '<') {
-                state = 1;
-            }
-            else if (ch == '>') {
-                state = 2;
-            }
-            else if (ch == '\n') {
-                *argv = (char **)realloc(*argv, sizeof(char **) * (i + 1));
-                (*argv)[i] = NULL;
-                break;
+                
+                do_external(argv);
             }
         }
-        else {
-            buf[j++] = ch;
-        }
+        else
+            printf("%s: can't found.\n", argv[0]);
     }
-    
-    *argc = i;
 
-	return 0;
-}
-
-
-int main() {
-	char **cmd_s = NULL;
-	int argc;
-    int i;
-    
-	init();
-
-	get_cmd(&cmd_s, &argc);
-    
-	while (is_cmd(cmd_s[0], "exit") == 0) {
-    
-    	// internal commands
-        if (is_cmd(cmd_s[0], "pwd"))
-        	do_pwd(cmd_s);
-        else if (is_cmd(cmd_s[0], "cd")) 
-        	do_cd(cmd_s);
-        else if (is_cmd(cmd_s[0], "ls"))
-        	do_ls(cmd_s);
-        // external commands
-        else if (is_executable(cmd_s[0])) {
-        	do_external(cmd_s);
-        }
-        else {
-            printf("%s: not found\n", cmd_s[0]);
-        }
-
-        reset();
-
-		get_cmd(&cmd_s, &argc);
-	}
-
-	return 0;
+    return 0;
 }
