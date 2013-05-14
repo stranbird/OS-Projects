@@ -10,11 +10,11 @@
 #include "includes/builtin.h"
 #include "includes/do_external.h"
 
-// #define try_redirect(io, fd) \
-//     if (fd[io] != io) { \
-//         stdin_use(fd[io]) \
-//         fd[io] = io; \
-//     } \
+#define try_redirect(io, fd) \
+    if (fd[io] != io) { \
+        stdin_use(fd[io]); \
+        fd[io] = io; \
+    } \
 
 int fd[2], ofd[2];
 
@@ -64,14 +64,8 @@ int main()
             pipe(fd);
         }
         else if (flag == NORMAL) {
-            if (fd[PIPE_R] != PIPE_R) {
-                stdin_use(fd[PIPE_R]);
-                fd[PIPE_R] = PIPE_R;
-            }
-            if (fd[PIPE_W] != PIPE_W) {
-                stdout_use(fd[PIPE_W]);
-                fd[PIPE_W] = PIPE_W;
-            }
+            try_redirect(PIPE_R, fd);
+            try_redirect(PIPE_W, fd);
         }
         
         if (argv[0] == NULL)
