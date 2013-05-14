@@ -16,9 +16,7 @@
 //         fd[io] = io; \
 //     } \
 
-int o_stdin, o_stdout;
 int fd[2], ofd[2];
-
 
 void type_prompt(int flag) {
     if (flag == NORMAL) {
@@ -48,17 +46,6 @@ bool is_cmd(const char *a_cmd, const char *b_cmd) {
     return strcmp(a_cmd, b_cmd) == 0;
 }
 
-void reset_pipe() {
-    fd[PIPE_R] = PIPE_R;
-    fd[PIPE_W] = PIPE_W;
-    
-    close(PIPE_R);
-    dup(o_stdin);
-    
-    close(PIPE_W);
-    dup(o_stdout);
-}
-
 int main()
 {
     char **argv;
@@ -66,14 +53,11 @@ int main()
     int stat;
     pid_t pid;
     
-    o_stdin = dup(PIPE_R);
-    o_stdout = dup(PIPE_W);
-    
-    ofd[PIPE_R] = -1;
+    init_pipe();
     
     while (YES) {
         type_prompt(flag);        
-        reset_pipe();
+        reset_pipe(fd);
         getcmd(&argv, &flag, &fd[PIPE_R], &fd[PIPE_W]);
         
         if (flag == TO_PIPE) {
