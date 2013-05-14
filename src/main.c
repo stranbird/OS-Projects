@@ -11,21 +11,17 @@
 #include "includes/glo.h"
 #include "includes/builtin.h"
 #include "includes/do_external.h"
+#include "includes/pipe.h"
 
 #define YES 1
 #define NO 0
 
-#define REDIRECT_OUTPUT 1
-
-#define PIPE_W 1
-#define PIPE_R 0
-
 void reset() {
     // reset the I/O redirect etc.
-    close(1);
+    close(PIPE_W);
     dup(o_stdout);
     
-    close(0);
+    close(PIPE_R);
     dup(o_stdin);
 }
 
@@ -51,7 +47,7 @@ int is_executable(const char *a_cmd) {
 
 int get_cmd(char ***argv, int *is_pipe) {
     char buf[255];
-    char ch;
+    int ch;
     int i = 0, j;
     int rfd;
     
@@ -66,7 +62,7 @@ int get_cmd(char ***argv, int *is_pipe) {
         printf("%s", PROMPT);
 
     j = 0;
-    while ((ch = getchar())) {
+    while ((ch = getchar()) != EOF) {
         if (ch == ' ' || ch == '\n' || ch == '<' || ch == '>' || ch == '|') {
 
             buf[j] = '\0';
@@ -119,7 +115,7 @@ int get_cmd(char ***argv, int *is_pipe) {
                 }
                 *argv = (char **)realloc(*argv, sizeof(char **) * (i + 1));
                 (*argv)[i] = NULL;
-                break;
+                return 0;
             }
         }
         else {
@@ -128,10 +124,6 @@ int get_cmd(char ***argv, int *is_pipe) {
     }
 
 	return 0;
-}
-
-int isMainProcess(pid_t mpid) {
-    return mpid == getpid();
 }
 
 int is_internal(const char *cmd) {
