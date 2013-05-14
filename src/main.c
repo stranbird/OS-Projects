@@ -10,6 +10,12 @@
 #include "includes/builtin.h"
 #include "includes/do_external.h"
 
+// #define try_redirect(io, fd) \
+//     if (fd[io] != io) { \
+//         stdin_use(fd[io]) \
+//         fd[io] = io; \
+//     } \
+
 int o_stdin, o_stdout;
 int fd[2], ofd[2];
 
@@ -63,32 +69,23 @@ int main()
     o_stdin = dup(PIPE_R);
     o_stdout = dup(PIPE_W);
     
-    reset_pipe();
-    
     ofd[PIPE_R] = -1;
     
     while (YES) {
-        type_prompt(flag);
-        
+        type_prompt(flag);        
         reset_pipe();
-        
         getcmd(&argv, &flag, &fd[PIPE_R], &fd[PIPE_W]);
-        
         
         if (flag == TO_PIPE) {
             pipe(fd);
         }
         else if (flag == NORMAL) {
             if (fd[PIPE_R] != PIPE_R) {
-                close(PIPE_R);
-                dup(fd[PIPE_R]);
-                close(fd[PIPE_R]);
+                stdin_use(fd[PIPE_R]);
                 fd[PIPE_R] = PIPE_R;
             }
             if (fd[PIPE_W] != PIPE_W) {
-                close(PIPE_W);
-                dup(fd[PIPE_W]);
-                close(fd[PIPE_W]);
+                stdout_use(fd[PIPE_W]);
                 fd[PIPE_W] = PIPE_W;
             }
         }
@@ -98,18 +95,19 @@ int main()
         if (strcmp(argv[0], "exit") == 0)
             break;
         else if (is_internal(argv[0])) {
+
             if (is_cmd(argv[0], "pwd"))
                 do_pwd(argv);
             else if (is_cmd(argv[0], "cd"))
                 do_cd(argv);
             else if (is_cmd(argv[0], "ls"))
                 do_ls(argv);
+
         }
         else if (is_external(argv[0])) {
             if ((pid = fork()) != 0) {
                 if (flag == TO_PIPE) {
                     close(fd[PIPE_W]);
-                    
                     ofd[PIPE_R] = fd[PIPE_R];
                 }
                 else
@@ -121,15 +119,11 @@ int main()
                 
                 if (fd[PIPE_W] != PIPE_W) {
                     close(fd[PIPE_R]);
-                    close(PIPE_W);
-                    dup(fd[PIPE_W]);
-                    close(fd[PIPE_W]);
+                    stdout_use(fd[PIPE_W]);
                 }
                 
                 if (ofd[PIPE_R] != PIPE_R) {
-                    close(PIPE_R);
-                    dup(ofd[PIPE_R]);
-                    close(ofd[PIPE_R]);
+                    stdin_use(ofd[PIPE_R]);
                 }
                 
                 do_external(argv);

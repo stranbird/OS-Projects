@@ -1,5 +1,5 @@
-osh: main.o do_external.o do_cd.o do_ls.o do_pwd.o dynamic_array.o parser.o
-	cc -o osh main.o do_external.o do_cd.o do_ls.o do_pwd.o dynamic_array.o parser.o
+osh: main.o do_external.o do_cd.o do_ls.o do_pwd.o dynamic_array.o parser.o pipe.o
+	cc -o osh main.o do_external.o do_cd.o do_ls.o do_pwd.o dynamic_array.o parser.o pipe.o
 
 main.o: main.c includes/glo.h includes/builtin.h includes/do_external.h includes/dynamic_array.h 
 	cc -c main.c
@@ -21,3 +21,6 @@ dynamic_array.o: dynamic_array.c includes/dynamic_array.h
 
 parser.o: parser.c parser.h
 	cc -c parser.c
+
+pipe.o: pipe.c includes/pipe.h
+	cc -c pipe.c
