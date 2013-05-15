@@ -26,6 +26,9 @@ int init_pipe() {
 	o_stdin = dup(PIPE_R);
     o_stdout = dup(PIPE_W);
 
+    ofd[PIPE_R] = PIPE_R;
+    ofd[PIPE_W] = PIPE_W;
+
     return 0;
 }
 

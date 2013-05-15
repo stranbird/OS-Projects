@@ -14,11 +14,9 @@
 
 #define try_redirect(io, fd) \
     if (fd[io] != io) { \
-        stdin_use(fd[io]); \
+        stdio_use(io, fd[io]); \
         fd[io] = io; \
     } \
-
-int fd[2], ofd[2];
 
 void type_prompt(int flag) {
     if (flag == NORMAL) {
@@ -61,7 +59,7 @@ int main()
     while (YES) {
         type_prompt(flag);        
         reset_pipe(fd);
-        getcmd(&argv, &flag, &fd[PIPE_R], &fd[PIPE_W]);
+        getcmd(&argv, &flag, &(fd[PIPE_R]), &(fd[PIPE_W]));
         
         if (flag == TO_PIPE) {
             pipe(fd);
@@ -97,9 +95,9 @@ int main()
                 waitpid(pid, &stat, 0);
             }
             else {
-                
                 if (fd[PIPE_W] != PIPE_W) {
-                    close(fd[PIPE_R]);
+                    if (fd[PIPE_R] != PIPE_R)
+                        close(fd[PIPE_R]);
                     stdout_use(fd[PIPE_W]);
                 }
                 
