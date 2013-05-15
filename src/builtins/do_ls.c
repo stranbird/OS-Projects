@@ -13,7 +13,6 @@ void do_ls(char **argv) {
 
 	while ((dp = readdir(dirp)) != NULL) {
 	  lstat(dp->d_name, &buf);
-	  // printf("%d\n", buf.st_mode);
 	  printf("%8ld\t%8ld\t%20s\t%8ld\n", (long int)buf.st_ino, (long int)buf.st_nlink, dp->d_name, (long int)buf.st_size);
 	}
 	closedir(dirp);
