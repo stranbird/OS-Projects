@@ -6,5 +6,8 @@
 #include <stdio.h>
 
 int do_external(char **argv) {
-    return execve(argv[0], argv, 0);
+    char *envp[1];
+    envp[0] = 0;
+
+    return execve(argv[0], argv, envp);
 }
