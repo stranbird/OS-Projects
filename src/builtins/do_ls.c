@@ -9,12 +9,12 @@ void do_ls(char **argv) {
 
 	DIR *dirp = opendir(dir_path);
 
-	printf("%8s\t%8s\t%20s\t%8s\t%12s\n", "inode", "nlink", "name", "size", "modified");
+	printf("%8s\t%8s\t%20s\t%8s\n", "inode", "nlink", "name", "size");
 
 	while ((dp = readdir(dirp)) != NULL) {
 	  lstat(dp->d_name, &buf);
 	  // printf("%d\n", buf.st_mode);
-	  printf("%8ld\t%8ld\t%20s\t%8ld\t%12ld\n", (long int)buf.st_ino, (long int)buf.st_nlink, dp->d_name, (long int)buf.st_size, buf.st_mtimespec.tv_sec);
+	  printf("%8ld\t%8ld\t%20s\t%8ld\n", (long int)buf.st_ino, (long int)buf.st_nlink, dp->d_name, (long int)buf.st_size);
 	}
 	closedir(dirp);
 }
