@@ -52,7 +52,6 @@ bool is_cmd(const char *a_cmd, const char *b_cmd) {
 int main()
 {
     char **argv;
-    char *envp[1];
     bool flag = NORMAL;
     int stat;
     pid_t pid;
@@ -108,11 +107,7 @@ int main()
                     stdin_use(ofd[PIPE_R]);
                 }
 
-                /* do_external(argv);*/
-                /* execl("/bin/cat", "/bin/cat", "o", 0);*/
-                envp[0] = 0;
-
-                execve(argv[0], argv, envp);
+                do_external(argv);
             }
         }
         else
