@@ -1,7 +1,11 @@
 #include <stdio.h>
+#include <unistd.h>
 
 #include "../includes/glo.h"
 
+#include "../includes/builtin.h"
+
 void do_pwd(char **argv) {
-	printf("%s\n", PWD);
+    getcwd(PWD, sizeof(PWD)/sizeof(char));
+    puts(PWD);
 }
