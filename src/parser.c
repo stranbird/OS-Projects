@@ -4,13 +4,16 @@
 #include <fcntl.h>
 
 #include "parser.h"
+
 #include "includes/glo.h"
+
 #include "includes/dynamic_array.h"
 
 bool is_delimiter(const char chr) {
     char delimiters[] = {' ', '\n', '<', '>', '|', '\0'};
+    int i;
     
-    for (int i = 0; i != strlen(delimiters); i++)
+    for (i = 0; i != strlen(delimiters); i++)
         if (chr == delimiters[i])
             return YES;
     

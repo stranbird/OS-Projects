@@ -2,12 +2,14 @@
 #include <string.h>
 #include <unistd.h>
 #include <stdlib.h>
-
 #include "parser.h"
 
 #include "includes/pipe.h"
+
 #include "includes/glo.h"
+
 #include "includes/builtin.h"
+
 #include "includes/do_external.h"
 
 #define try_redirect(io, fd) \
@@ -30,8 +32,9 @@ bool is_internal(const char *cmd) {
         "pwd",
         "ls"
     };
+    int i;
     
-    for (int i = 0; i != sizeof(internal_cmd) / sizeof(char *); i++)
+    for (i = 0; i != sizeof(internal_cmd) / sizeof(char *); i++)
         if (strcmp(cmd, internal_cmd[i]) == 0)
             return YES;
  
